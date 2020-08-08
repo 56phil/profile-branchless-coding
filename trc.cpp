@@ -66,19 +66,6 @@ class DataSet {
             outputs.clear();
         }
 
-        /*         std::string get_times() { */
-        /*             bool not_first = false; */
-        /*             std::stringstream sst; */
-        /*             for(auto a:times) { */
-        /*                 if(not_first) { */
-        /*                     sst << ','; */
-        /*                 } */
-        /*                 sst << "\"" << a << "\""; */
-        /*                 not_first = true; */
-        /*             } */
-        /*             return sst.str(); */
-        /*         } */
-
         std::string get_times() {
             return get_contents(times);
         }
@@ -220,14 +207,15 @@ class DataSet {
 
         template <class T>
             std::string get_contents(std::vector<T>& c) {
-                bool not_first = false;
                 std::stringstream sst;
+                bool first_time = true;
                 for(auto a:c) {
-                    if(not_first) {
-                        sst << ',';
+                    if(first_time) {
+                        first_time = false;
+                        sst << "\"" << a << "\"";
+                        continue;
                     }
-                    sst << "\"" << a << "\"";
-                    not_first = true;
+                    sst << ',' << "\"" << a << "\"";
                 }
                 return sst.str();
             }
@@ -280,11 +268,12 @@ void summarize(dsv& v) {
     // Returns: nothing
     std::cout << "\n\nStatistics:\n";
     for(auto a : v) {
-        std::cout << "mean: " << a.get_t_mean() << K_ms
+        std::cout
+            << a.get_method_name() << " "
+            << "mean: " << a.get_t_mean() << K_ms
             << "min: " << a.get_t_min() << K_ms
             << "median: " << a.get_t_median() << K_ms
             << "max: " << a.get_t_max() << K_ms
-            << " " << a.get_method_name()
             << std::endl;
     }
     std::cout << '\n' << std::endl;
@@ -302,7 +291,7 @@ void write_summary(dsv& v, std::string& ofn, ull& z, ull& n) {
             << "\"time_stamp\" : \"" << gft(true) << "\", "
             << "\"string_size\" : \"" << z << "\", "
             << "\"sample_size\" : \"" << n << "\", "
-            << "\"inputs\" : [" << v[0].get_inputs() << "], "
+            << "\n\"inputs\" : [" << v[0].get_inputs() << "], \n"
             << "\"methods\" : [";
         auto last = v.size() -  1;
         for(auto i = 0; i < v.size(); i++) {
@@ -407,8 +396,9 @@ void test(stv& iv, DataSet& v, ull& ils) {
         if(first_time) {
             first_time = false;
             if(!verify(o)) {
-                std::cout << " Error from " << v.get_desc() << std::endl;
-                std::cout << i.substr(0, 100) << '\n' << o.substr(0, 100) << std::endl;
+                std::cout << " Error from " << v.get_desc() << '\n'
+                    << i.substr(0, 100) << '\n' << o.substr(0, 100)
+                    << std::endl;
                 break;
             }
         }
@@ -433,13 +423,12 @@ ull prompt(std::string a) {
 void init_string(std::string& s, ull& z) {
     const int range = 0x7e - 0x20;
     s.clear();
-    for(ull c = 0; c < z; c++) {
+    do {
         char r = rand() % range + 0x20;
-        if(r == '"') {
-            s += '\\';
+        if(isupper(r) || islower(r)) {
+            s += r;
         }
-        s += r;
-    }
+    } while(s.size() <  z);
 }
 
 void disp_help() {
