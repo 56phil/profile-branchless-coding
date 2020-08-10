@@ -1,5 +1,5 @@
-#include <chrono>
 #include <ctime>
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -49,21 +49,16 @@ class DataSet {
     public:
         DataSet();
         DataSet(std::string idesc, std::string imn, std::function<void(std::string& a)> ifunc) {
+            reset_vectors();
             set_desc(idesc);
             set_method_name(imn);
             set_func(ifunc);
         }
 
-        void reset_times() {
-            times.clear();
-        }
-
-        void reset_inputs() {
-            inputs.clear();
-        }
-
-        void reset_outputs() {
-            outputs.clear();
+        void reset_vectors() {
+            reset_times();
+            reset_inputs();
+            reset_outputs();
         }
 
         std::string get_times() {
@@ -176,6 +171,18 @@ class DataSet {
         ull t_stop;
         ulv times;
 
+        void reset_inputs() {
+            inputs.clear();
+        }
+
+        void reset_outputs() {
+            outputs.clear();
+        }
+
+        void reset_times() {
+            times.clear();
+        }
+
         ull calc_max() {
             ull result = times[0];
             for(auto a:times) {
@@ -267,9 +274,9 @@ void summarize(dsv& v) {
     // Gets: dsv
     // Returns: nothing
     std::cout << "\n\nStatistics:\n";
-    for(auto a : v) {
-        std::cout
-            << a.get_method_name() << " "
+    for(auto a:v) {
+        std::cout << gft() << ' '
+            << a.get_method_name() << ' '
             << "mean: " << a.get_t_mean() << K_ms
             << "min: " << a.get_t_min() << K_ms
             << "median: " << a.get_t_median() << K_ms
@@ -286,12 +293,32 @@ void write_summary(dsv& v, std::string& ofn, ull& z, ull& n) {
     //       ull
     //       returns: nothing
     if(ofn.size() > 0) {
+        /* ull max_inputs_size = 0x1fffffc0; */
+        /* std::string t(v[0].get_inputs()); */
+        /* size_t lpos = t.size(); */
+        /* size_t pos; */
+        /* ull lim = n; */
+        /* while(lim) { */
+        /*     pos = t.rfind("\",", lpos); */
+        /*     if(pos == std::string::npos) { */
+        /*         break; */
+        /*     } */
+        /*     t.insert(pos + 2, "\n"); */
+        /*     lpos = pos; */
+        /*     lim--; */
+        /* } */
+        /* if(t.size() > max_inputs_size) { */
+        /*     t = "\"NULL\""; */
+        /* } else { */
+        /*     t = "[" + t + "]"; */
+        /* } */
         std::stringstream sst;
-        sst << "{ \"file_name\" : \"" << ofn << "\", "
+        sst << "{"
+            /* << "\"inputs\" : " << t << ", " */
+            << "\"file_name\" : \"" << ofn << "\", "
             << "\"time_stamp\" : \"" << gft(true) << "\", "
             << "\"string_size\" : \"" << z << "\", "
             << "\"sample_size\" : \"" << n << "\", "
-            << "\n\"inputs\" : [" << v[0].get_inputs() << "], \n"
             << "\"methods\" : [";
         auto last = v.size() -  1;
         for(auto i = 0; i < v.size(); i++) {
@@ -381,15 +408,12 @@ bool verify(std::string& a) {
 }
 
 void test(stv& iv, DataSet& v, ull& ils) {
-    v.reset_times();
-    v.reset_times();
-    v.reset_outputs();
-    v.set_t_start();
     std::function<void(std::string& a)> func = v.get_func();
     bool first_time = true;
+    v.set_t_start();
     for(auto i:iv) {
-        auto start = std::chrono::high_resolution_clock::now();
         std::string o(i);
+        auto start = std::chrono::high_resolution_clock::now();
         func(o);
         ull t = ((std::chrono::high_resolution_clock::now() - start).count());
         v.append_time(t);
@@ -402,14 +426,14 @@ void test(stv& iv, DataSet& v, ull& ils) {
                 break;
             }
         }
-        v.append_input(i);
-        v.append_output(o);
+        /* v.append_input(i); */
+        /* v.append_output(o); */
     }
+    v.set_t_stop();
     v.set_t_max();
     v.set_t_mean();
     v.set_t_median();
     v.set_t_min();
-    v.set_t_stop();
     progress_report(v);
 }
 
@@ -425,7 +449,10 @@ void init_string(std::string& s, ull& z) {
     s.clear();
     do {
         char r = rand() % range + 0x20;
-        if(isupper(r) || islower(r)) {
+        if(isprint(r)) {
+            if(r == '"' || r == '\\') {
+                s += '\\';
+            }
             s += r;
         }
     } while(s.size() <  z);
@@ -514,7 +541,7 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
-    ull ssz = 5'000'000;
+    ull ssz = 500'000;
     ull sss = 7;
     std::string ofn("");
 
@@ -522,13 +549,13 @@ int main(int argc, char** argv) {
         ssz = prompt("String size?: ");
         sss = prompt("Sample space size?: ");
     } else {
-        std::string sssz = input.getCmdOption("-z");
-        if(is_numeric(sssz)) {
-            ssz = stol(sssz);
+        std::string s_ssz = input.getCmdOption("-z");
+        if(is_numeric(s_ssz)) {
+            ssz = stol(s_ssz);
         }
-        std::string ssss = input.getCmdOption("-s");
-        if(is_numeric(ssss)) {
-            sss = stol(ssss) | 1; // must be odd for median
+        std::string s_sss = input.getCmdOption("-s");
+        if(is_numeric(s_sss)) {
+            sss = stol(s_sss) | 1; // must be odd for median
         }
         ofn = input.getCmdOption("-f");
     }
@@ -537,7 +564,7 @@ int main(int argc, char** argv) {
     std::cout.imbue(loc);
     std::cout << gft()
         << " String size: " << ssz
-        << " \tSample size: " << sss
+        << " \tSamples: " << sss
         << " \tOutput file: " << ofn
         << std::endl;
 
