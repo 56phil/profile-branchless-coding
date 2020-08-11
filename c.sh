@@ -4,13 +4,14 @@ dt=`date +"%T"`
 echo $dt
 for o in 3 2 1 0 s z fast
 do
-	clang++ -std=c++17 trc.cpp -o trc$o -O$o
-	for s in 21 321 4321
+	clang++ -std=c++17 -l sqlite3 trc.cpp -o trc$o -O$o
+	for s in 7 31 127
 	do
-		for z in 10123456 20123456 40123456 80123456
+		for z in 1048576 2097162 4194324
 		do
-			ofn=trc$o-s$s-z$z.json
-			./trc$o -s $s -f $ofn -z $z
+			ofn=trc-z$z-s$s-o$o.json
+			ofn=trc.db
+			./trc$o -s $s -f $ofn -z $z -d $dbn
 			jsonlint -q $ofn
 		done
 	done
